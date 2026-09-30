@@ -1,0 +1,161 @@
+```yaml
+---
+# Tasks for installing and configuring:
+# - Common packages
+# - Docker and Docker Compose
+# - Docker user permissions
+# - Nginx
+
+
+# ---------------------------------------------------------
+# Update APT package cache
+# ---------------------------------------------------------
+- name: Update APT package cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+
+# ---------------------------------------------------------
+# Install common packages
+# ---------------------------------------------------------
+- name: Install common packages
+  apt:
+    name: "{{ COMMON_PACKAGES }}"
+    state: present
+  become: true
+
+
+# ---------------------------------------------------------
+# Install Docker and Docker Compose
+# ---------------------------------------------------------
+- name: Install Docker and Docker Compose
+  apt:
+    name: "{{ DOCKER_PACKAGES }}"
+    state: present
+  become: true
+  notify: Restart Docker
+
+
+# ---------------------------------------------------------
+# Start and enable Docker service
+# ---------------------------------------------------------
+- name: Start and enable Docker
+  service:
+    name: "{{ DOCKER_SERVICE }}"
+    state: started
+    enabled: true
+  become: true
+
+
+# ---------------------------------------------------------
+# Add user to Docker group
+# ---------------------------------------------------------
+# Allows the user to run Docker commands without sudo
+# after starting a new login session.
+#
+# Example:
+#   docker ps
+#
+# instead of:
+#   sudo docker ps
+# ---------------------------------------------------------
+- name: Add user to Docker group
+  user:
+    name: "{{ DOCKER_USER }}"
+    groups:
+      - docker
+    append: true
+  become: true
+
+
+# ---------------------------------------------------------
+# Verify Docker group membership
+# ---------------------------------------------------------
+- name: Check Docker group membership
+  command: id -nG "{{ DOCKER_USER }}"
+  register: docker_groups
+  changed_when: false
+  become: true
+
+
+- name: Show Docker group membership
+  debug:
+    msg: "{{ docker_groups.stdout }}"
+
+
+# ---------------------------------------------------------
+# Verify Docker service
+# ---------------------------------------------------------
+- name: Check Docker service status
+  command: systemctl is-active "{{ DOCKER_SERVICE }}"
+  register: docker_status
+  changed_when: false
+  become: true
+
+
+- name: Show Docker service status
+  debug:
+    msg: "{{ docker_status.stdout }}"
+
+
+# ---------------------------------------------------------
+# Verify Docker access as the configured user
+# ---------------------------------------------------------
+# A new group shell is created so the docker group
+# is available during this verification.
+# ---------------------------------------------------------
+- name: Verify Docker access
+  shell: |
+    newgrp docker <<EOF
+    docker ps
+    EOF
+  become: true
+  become_user: "{{ DOCKER_USER }}"
+  register: docker_ps
+  changed_when: false
+
+
+# ---------------------------------------------------------
+# Show Docker containers
+# ---------------------------------------------------------
+- name: Show Docker containers
+  debug:
+    var: docker_ps.stdout_lines
+
+
+# ---------------------------------------------------------
+# Remove Apache
+# ---------------------------------------------------------
+# Apache may already be listening on port 80.
+# Nginx also normally uses port 80, so both services
+# cannot listen on the same port.
+# ---------------------------------------------------------
+- name: Remove Apache
+  apt:
+    name: apache2
+    state: absent
+    purge: true
+  become: true
+
+
+# ---------------------------------------------------------
+# Install Nginx
+# ---------------------------------------------------------
+- name: Install Nginx
+  apt:
+    name: "{{ NGINX_PACKAGE }}"
+    state: present
+  become: true
+
+
+# ---------------------------------------------------------
+# Start and enable Nginx
+# ---------------------------------------------------------
+- name: Start and enable Nginx
+  service:
+    name: "{{ NGINX_SERVICE }}"
+    state: started
+    enabled: true
+  become: true

@@ -1,0 +1,23 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for packages
+COMMON_PACKAGES:
+  - git
+  - curl
+  - wget
+  - unzip
+  - vim
+  - python3
+  - python3-pip
+  - ca-certificates
+DOCKER_PACKAGES:
+  - docker.io
+  - docker-compose-v2
+
+DOCKER_SERVICE: docker
+
+NGINX_PACKAGE: nginx
+
+NGINX_SERVICE: nginx
+
+DOCKER_USER: ubuntu

@@ -1,0 +1,7 @@
+---
+- name: setup application servers
+  hosts: db
+  become: yes
+
+  roles:
+    - packages
